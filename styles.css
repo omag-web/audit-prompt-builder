@@ -572,6 +572,86 @@ fieldset {
   color: var(--ink);
 }
 
+/* ---------- Step 3: live-share toggle ---------- */
+
+.share-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 14px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.toggle-switch {
+  flex: none;
+  position: relative;
+  display: inline-block;
+  margin-top: 1px;
+}
+
+.toggle-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.toggle-track {
+  display: block;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background var(--transition-fast);
+}
+
+.toggle-thumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(16, 27, 51, 0.25);
+  transition: transform var(--transition-fast);
+}
+
+.toggle-switch input:checked + .toggle-track {
+  background: var(--navy-700);
+}
+
+.toggle-switch input:checked + .toggle-track .toggle-thumb {
+  transform: translateX(18px);
+}
+
+.toggle-switch input:focus-visible + .toggle-track {
+  outline: 3px solid var(--gold-500);
+  outline-offset: 2px;
+}
+
+.share-toggle-text {
+  flex: 1;
+}
+
+.share-toggle-title {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.share-toggle-sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
 /* ---------- Step 4: prompt output ---------- */
 
 .prompt-output-wrap {
@@ -670,6 +750,13 @@ fieldset {
 
 .copy-confirm.is-visible {
   opacity: 1;
+}
+
+.share-confirm {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--navy-500);
 }
 
 .takeaway-strip {
