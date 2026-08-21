@@ -67,6 +67,13 @@
   var clearAuditsBtn = document.getElementById("clearAuditsBtn");
   var savedAuditItemTemplate = document.getElementById("savedAuditItemTemplate");
 
+  var summaryPage = document.getElementById("summaryPage");
+  var summaryScore = document.getElementById("summaryScore");
+  var summaryFocus = document.getElementById("summaryFocus");
+  var summaryPromptBlock = document.getElementById("summaryPromptBlock");
+  var summaryPromptText = document.getElementById("summaryPromptText");
+  var summaryCopyBtn = document.getElementById("summaryCopyBtn");
+
   var STEP_CAPTIONS = {
     1: "Step 1 of 4 \u00B7 Choose a page",
     2: "Step 2 of 4 \u00B7 Score the page",
@@ -111,11 +118,13 @@
     }
 
     updateStep1Validity();
+    updateSummaryPanel();
   });
 
   otherPageInput.addEventListener("input", function () {
     state.otherPage = otherPageInput.value.trim();
     updateStep1Validity();
+    updateSummaryPanel();
   });
 
   pageUrlInput.addEventListener("input", function () {
@@ -148,6 +157,7 @@
         updateFindTracker(key, state.answers[key]);
         updateScoreSummary();
         updateStep2Validity();
+        updateSummaryPanel();
       });
     });
   });
@@ -236,10 +246,13 @@
     if (otherChecked) {
       otherFrictionInput.focus();
     }
+
+    updateSummaryPanel();
   });
 
   otherFrictionInput.addEventListener("input", function () {
     state.otherFriction = otherFrictionInput.value.trim();
+    updateSummaryPanel();
   });
 
   backStep2Btn.addEventListener("click", function () { goToStep(2); });
@@ -251,6 +264,7 @@
     updatePromptFades();
     saveAuditToHistory(prompt);
     renderSavedAudits();
+    showSummaryPrompt(prompt);
     goToStep(4);
   });
 
@@ -316,6 +330,33 @@
     ];
 
     return lines.join("\n");
+  }
+
+  /* ---------------------------------------------------
+     Live summary sidebar (desktop only, safe no-op elsewhere)
+  --------------------------------------------------- */
+  function updateSummaryPanel() {
+    if (!summaryPage) return;
+
+    summaryPage.textContent = state.page ? pageLabel() : "\u2014";
+
+    var allAnswered = QUESTION_ORDER.every(function (k) { return state.answers[k] !== null; });
+    summaryScore.textContent = allAnswered ? (computeScore() + "/4") : "\u2014";
+
+    var hasFriction = state.friction.length > 0;
+    summaryFocus.textContent = hasFriction ? frictionList() : "\u2014";
+  }
+
+  function showSummaryPrompt(prompt) {
+    if (!summaryPromptBlock) return;
+    summaryPromptText.textContent = prompt;
+    summaryPromptBlock.hidden = false;
+  }
+
+  function hideSummaryPrompt() {
+    if (!summaryPromptBlock) return;
+    summaryPromptBlock.hidden = true;
+    summaryPromptText.textContent = "";
   }
 
   /* ---------------------------------------------------
@@ -394,6 +435,16 @@
       function () { showConfirm("Prompt selected \u2014 copy with Ctrl/Cmd+C"); }
     );
   });
+
+  if (summaryCopyBtn) {
+    summaryCopyBtn.addEventListener("click", function () {
+      copyTextWithFallback(
+        promptOutput.value,
+        function () { showConfirm("Copied to clipboard"); },
+        function () { showConfirm("Copy unavailable \u2014 use Download on the main prompt instead"); }
+      );
+    });
+  }
 
   function slugify(text) {
     return text
@@ -552,6 +603,9 @@
     }
     copyConfirm.classList.remove("is-visible");
 
+    updateSummaryPanel();
+    hideSummaryPrompt();
+
     goToStep(1);
   });
 
@@ -559,5 +613,6 @@
      Init
   --------------------------------------------------- */
   renderSavedAudits();
+  updateSummaryPanel();
   goToStep(1);
 })();
