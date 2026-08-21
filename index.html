@@ -73,6 +73,16 @@
           <label for="pageUrl">Page URL <span class="optional-tag">(optional)</span></label>
           <input type="url" id="pageUrl" placeholder="https://yourorganization.org/page">
         </div>
+
+        <details class="find-info">
+          <summary>What is FIND?</summary>
+          <dl class="find-info-list">
+            <div><dt>Findable</dt><dd>Can members quickly locate this page without knowing your department structure?</dd></div>
+            <div><dt>Intuitive</dt><dd>Does the navigation and wording make sense without explanation?</dd></div>
+            <div><dt>Necessary</dt><dd>Does the content serve a clear member purpose?</dd></div>
+            <div><dt>Directed</dt><dd>Does the page clearly guide members to a next step?</dd></div>
+          </dl>
+        </details>
       </div>
 
       <div class="nav-row nav-row-single">
@@ -148,7 +158,10 @@
 
         <div class="score-summary" id="scoreSummary" hidden>
           <p class="score-summary-number"><span id="scoreValue">0</span><span class="score-summary-max">/4</span></p>
-          <p class="score-summary-text" id="scoreText"></p>
+          <div>
+            <p class="score-summary-text" id="scoreText"></p>
+            <p class="score-summary-note">"No" and "Not sure" both flag the page for review.</p>
+          </div>
         </div>
       </div>
 
@@ -197,12 +210,13 @@
         <p class="card-hint">Copy this into your AI tool of choice, along with the page content if no URL was provided.</p>
 
         <label for="promptOutput" class="visually-hidden">Generated AI audit prompt</label>
-        <textarea id="promptOutput" class="prompt-output" rows="14" readonly></textarea>
+        <textarea id="promptOutput" class="prompt-output" rows="16" readonly></textarea>
 
         <div class="copy-row">
           <button type="button" class="btn btn-primary" id="copyPromptBtn">Copy prompt</button>
-          <span class="copy-confirm" id="copyConfirm" role="status" aria-live="polite"></span>
+          <button type="button" class="btn btn-ghost" id="downloadPromptBtn">Download .txt</button>
         </div>
+        <p class="copy-confirm" id="copyConfirm" role="status" aria-live="polite"></p>
       </div>
 
       <div class="card takeaway-card">
@@ -210,8 +224,17 @@
       </div>
 
       <div class="nav-row nav-row-single">
-        <button type="button" class="btn btn-ghost" id="startOverBtn">Start over</button>
+        <button type="button" class="btn btn-ghost" id="startOverBtn">Audit another page</button>
       </div>
+
+      <section class="card saved-audits-card" id="savedAuditsSection" hidden aria-labelledby="savedAuditsHeading">
+        <div class="saved-audits-header">
+          <h2 id="savedAuditsHeading">Your audits</h2>
+          <button type="button" class="link-btn" id="clearAuditsBtn">Clear all</button>
+        </div>
+        <p class="card-hint">Saved on this device only &mdash; not sent anywhere.</p>
+        <ul class="saved-audits-list" id="savedAuditsList"></ul>
+      </section>
     </section>
 
   </main>
@@ -221,6 +244,19 @@
   </footer>
 
 </div>
+
+<template id="savedAuditItemTemplate">
+  <li class="saved-audit-item">
+    <div class="saved-audit-main">
+      <p class="saved-audit-page"></p>
+      <p class="saved-audit-meta"></p>
+    </div>
+    <div class="saved-audit-actions">
+      <button type="button" class="link-btn saved-audit-copy">Copy</button>
+      <button type="button" class="icon-btn saved-audit-delete" aria-label="Delete this saved audit">&times;</button>
+    </div>
+  </li>
+</template>
 
 <script src="script.js"></script>
 </body>
