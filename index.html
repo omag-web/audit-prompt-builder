@@ -210,17 +210,17 @@
         <p class="card-hint">Copy this into your AI tool of choice, along with the page content if no URL was provided.</p>
 
         <label for="promptOutput" class="visually-hidden">Generated AI audit prompt</label>
-        <textarea id="promptOutput" class="prompt-output" rows="16" readonly></textarea>
+        <div class="prompt-output-wrap" id="promptOutputWrap">
+          <textarea id="promptOutput" class="prompt-output" rows="16" readonly></textarea>
+        </div>
 
         <div class="copy-row">
           <button type="button" class="btn btn-primary" id="copyPromptBtn">Copy prompt</button>
           <button type="button" class="btn btn-ghost" id="downloadPromptBtn">Download .txt</button>
         </div>
         <p class="copy-confirm" id="copyConfirm" role="status" aria-live="polite"></p>
-      </div>
 
-      <div class="card takeaway-card">
-        <p class="takeaway-line">Better input creates a better audit.</p>
+        <p class="takeaway-strip">Better input creates a better audit.</p>
       </div>
 
       <div class="nav-row nav-row-single">
