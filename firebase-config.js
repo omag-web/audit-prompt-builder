@@ -12,7 +12,9 @@
    this — it just skips the sharing step if it's ever unset.
 
    REMAINING STEP — Firestore security rules (do this once,
-   in the Firebase console, before your first live run):
+   in the Firebase console, before your first live run — and
+   again if you're updating from an earlier version of these
+   rules, since the delete permission below is new):
 
    1. In the left sidebar, go to Build > Firestore Database.
       If you haven't already, click "Create database" (choose
@@ -33,22 +35,35 @@
                            && request.resource.data.score >= 0
                            && request.resource.data.score <= 4;
             allow read: if true;
-            allow update, delete: if false;
+            allow update: if false;
+            allow delete: if true;
           }
         }
       }
 
       This lets anyone anonymously add a properly-shaped result
       and lets anyone read the live totals (needed for the
-      projector view) — but nobody can edit or delete existing
-      entries from the browser.
+      projector view). Deletes are allowed too — that's what
+      powers the "Clear all results" button on results.html.
+
+      A tradeoff worth knowing: with no login system, there's no
+      way to gate deletes to just you without adding real user
+      authentication (a much bigger lift than this needs). The
+      "Clear all results" button only appears when you open
+      results.html?manage=1 — never on the plain URL you'd
+      project — but someone sufficiently technical could still
+      find the collection name and delete via the browser
+      console regardless of the button. That's an acceptable
+      tradeoff for anonymous, ephemeral demo data with nothing
+      sensitive in it. If that ever stops being true, this needs
+      real authentication instead of an open delete rule.
 
    3. Optional cleanup between sessions: Firestore supports a
       native TTL policy (Firestore > TTL in the console) if
-      you'd rather old results expire automatically than clear
-      them by hand before each talk. Not required — you can
-      also just delete the "submissions" collection in the
-      console before each run.
+      you'd rather old results expire automatically. Not
+      required — you can also just open results.html?manage=1
+      and click "Clear all results," or delete the
+      "submissions" collection by hand in the console.
 
    A note on the API key below: Firebase web API keys are safe
    to commit to a public repo (this one will be, on GitHub
