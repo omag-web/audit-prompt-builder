@@ -195,6 +195,17 @@
           <label for="otherFrictionInput">Describe the friction</label>
           <input type="text" id="otherFrictionInput" placeholder="e.g. Broken form submission">
         </div>
+
+        <div class="share-toggle-row" id="shareToggleRow" hidden>
+          <label class="toggle-switch">
+            <input type="checkbox" id="shareToggleInput" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <div class="share-toggle-text">
+            <p class="share-toggle-title">Share to room results</p>
+            <p class="share-toggle-sub">Anonymous &mdash; sends only your page type, score, and flagged categories. No URL, no typed text.</p>
+          </div>
+        </div>
       </div>
 
       <div class="nav-row">
@@ -219,6 +230,7 @@
           <button type="button" class="btn btn-ghost" id="downloadPromptBtn">Download .txt</button>
         </div>
         <p class="copy-confirm" id="copyConfirm" role="status" aria-live="polite"></p>
+        <p class="share-confirm" id="shareConfirm" role="status" aria-live="polite" hidden>&#10003; Shared to room results</p>
 
         <p class="takeaway-strip">Better input creates a better audit.</p>
       </div>
@@ -254,6 +266,9 @@
   </li>
 </template>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
