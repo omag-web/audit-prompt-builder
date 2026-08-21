@@ -343,3 +343,41 @@ body {
     padding: 32px 20px 48px;
   }
 }
+
+/* ---------- Admin bar (only visible with ?manage=1 in the URL) ---------- */
+
+.admin-bar {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(6px);
+}
+
+.admin-clear-btn {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: #F87171;
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.admin-clear-btn:hover {
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.admin-status {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
