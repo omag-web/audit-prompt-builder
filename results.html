@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Room Results &mdash; FIND Audit Prompt Builder</title>
+<meta name="description" content="Live projector view of room-wide FIND Audit results.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="results.css">
+</head>
+<body>
+
+<div class="wall">
+
+  <header class="wall-header">
+    <div class="wall-header-text">
+      <p class="wall-eyebrow">FIND Audit Prompt Builder</p>
+      <h1 class="wall-title">Live Room Results</h1>
+    </div>
+    <div class="wall-status" id="wallStatus">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Connecting&hellip;</span>
+    </div>
+  </header>
+
+  <!-- Shown only if firebase-config.js still has placeholder values -->
+  <section class="wall-empty-state" id="notConfiguredState" hidden>
+    <p class="wall-empty-title">Live results aren&rsquo;t connected yet</p>
+    <p class="wall-empty-text">Add your project&rsquo;s details to <code>firebase-config.js</code> to turn this on. The setup steps are written out at the top of that file.</p>
+  </section>
+
+  <!-- Shown once connected, before any submissions arrive -->
+  <section class="wall-empty-state" id="waitingState" hidden>
+    <p class="wall-empty-title">Waiting for the first response&hellip;</p>
+    <p class="wall-empty-text">Results will appear here the moment someone in the room generates a prompt.</p>
+  </section>
+
+  <main class="wall-main" id="wallMain" hidden>
+
+    <section class="stat-row">
+      <div class="stat-card">
+        <p class="stat-value" id="statTotal">0</p>
+        <p class="stat-label">Responses so far</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value" id="statAvgScore">0.0</p>
+        <p class="stat-label">Average FIND score</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value" id="statTopPage">&mdash;</p>
+        <p class="stat-label">Most-audited page</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">Where the room is flagging issues</h2>
+      <div class="letter-bars" id="letterBars">
+        <!-- filled by results.js -->
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">Most common friction points</h2>
+      <ul class="friction-list" id="frictionList">
+        <!-- filled by results.js -->
+      </ul>
+    </section>
+
+    <section class="panel activity-panel">
+      <h2 class="panel-title">Recent activity</h2>
+      <ul class="activity-list" id="activityList">
+        <!-- filled by results.js -->
+      </ul>
+    </section>
+
+  </main>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="results.js"></script>
+</body>
+</html>
