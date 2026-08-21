@@ -56,6 +56,7 @@
   var toStep4Btn = document.getElementById("toStep4");
 
   var promptOutput = document.getElementById("promptOutput");
+  var promptOutputWrap = document.getElementById("promptOutputWrap");
   var copyPromptBtn = document.getElementById("copyPromptBtn");
   var downloadPromptBtn = document.getElementById("downloadPromptBtn");
   var copyConfirm = document.getElementById("copyConfirm");
@@ -157,7 +158,9 @@
     letterEl.classList.add("is-answered");
     if (answer === "No" || answer === "Not sure") {
       letterEl.classList.add("is-flagged");
+      letterEl.classList.remove("is-clean");
     } else {
+      letterEl.classList.add("is-clean");
       letterEl.classList.remove("is-flagged");
     }
   }
@@ -244,6 +247,8 @@
   toStep4Btn.addEventListener("click", function () {
     var prompt = buildPrompt();
     promptOutput.value = prompt;
+    promptOutput.scrollTop = 0;
+    updatePromptFades();
     saveAuditToHistory(prompt);
     renderSavedAudits();
     goToStep(4);
@@ -312,6 +317,26 @@
 
     return lines.join("\n");
   }
+
+  /* ---------------------------------------------------
+     Prompt scroll fade indicators
+  --------------------------------------------------- */
+  function updatePromptFades() {
+    if (!promptOutputWrap) return;
+    var el = promptOutput;
+    var scrollable = el.scrollHeight > el.clientHeight + 2;
+    if (!scrollable) {
+      promptOutputWrap.classList.remove("show-fade-top", "show-fade-bottom");
+      return;
+    }
+    var atTop = el.scrollTop <= 2;
+    var atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
+    promptOutputWrap.classList.toggle("show-fade-top", !atTop);
+    promptOutputWrap.classList.toggle("show-fade-bottom", !atBottom);
+  }
+
+  promptOutput.addEventListener("scroll", updatePromptFades);
+  window.addEventListener("resize", updatePromptFades);
 
   /* ---------------------------------------------------
      Copy / Download
@@ -508,7 +533,7 @@
       qEl.querySelectorAll(".answer-btn").forEach(function (b) { b.classList.remove("is-selected"); });
     });
     findTracker.querySelectorAll(".find-letter").forEach(function (el) {
-      el.classList.remove("is-answered", "is-flagged");
+      el.classList.remove("is-answered", "is-flagged", "is-clean");
     });
     scoreSummary.hidden = true;
     toStep3Btn.disabled = true;
@@ -522,6 +547,9 @@
     otherFrictionInput.value = "";
 
     promptOutput.value = "";
+    if (promptOutputWrap) {
+      promptOutputWrap.classList.remove("show-fade-top", "show-fade-bottom");
+    }
     copyConfirm.classList.remove("is-visible");
 
     goToStep(1);
