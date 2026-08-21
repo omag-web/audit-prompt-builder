@@ -166,24 +166,34 @@ body {
 }
 
 .find-letter.is-answered {
-  background: rgba(201, 162, 39, 0.14);
-  border-color: rgba(201, 162, 39, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
-.find-letter.is-answered .letter-glyph {
+.find-letter.is-clean .letter-glyph {
+  color: #E4E8F1;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.find-letter.is-clean .letter-label {
+  color: #B9C2D6;
+}
+
+.find-letter.is-flagged {
+  background: rgba(201, 162, 39, 0.16);
+  border-color: rgba(201, 162, 39, 0.45);
+}
+
+.find-letter.is-flagged .letter-glyph {
   color: var(--navy-900);
   background: var(--gold-500);
   border-color: var(--gold-500);
 }
 
-.find-letter.is-answered .letter-label {
+.find-letter.is-flagged .letter-label {
   color: var(--gold-300);
-}
-
-.find-letter.is-flagged .letter-glyph {
-  background: transparent;
-  color: var(--gold-500);
-  border-color: var(--gold-500);
+  font-weight: 600;
 }
 
 /* ---------- Step progress bar ---------- */
@@ -564,6 +574,44 @@ fieldset {
 
 /* ---------- Step 4: prompt output ---------- */
 
+.prompt-output-wrap {
+  position: relative;
+  border-radius: var(--radius-md);
+}
+
+.prompt-output-wrap::before,
+.prompt-output-wrap::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 30px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  z-index: 2;
+}
+
+.prompt-output-wrap::before {
+  top: 2px;
+  background: linear-gradient(to bottom, var(--bg) 20%, transparent);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.prompt-output-wrap::after {
+  bottom: 2px;
+  background: linear-gradient(to top, var(--bg) 20%, transparent);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.prompt-output-wrap.show-fade-top::before {
+  opacity: 1;
+}
+
+.prompt-output-wrap.show-fade-bottom::after {
+  opacity: 1;
+}
+
 .prompt-output {
   width: 100%;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
@@ -575,6 +623,26 @@ fieldset {
   border-radius: var(--radius-md);
   padding: 16px;
   resize: vertical;
+  display: block;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.prompt-output::-webkit-scrollbar {
+  width: 8px;
+}
+
+.prompt-output::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.prompt-output::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+}
+
+.prompt-output::-webkit-scrollbar-thumb:hover {
+  background: var(--navy-500);
 }
 
 .prompt-output:focus {
@@ -604,17 +672,15 @@ fieldset {
   opacity: 1;
 }
 
-.takeaway-card {
+.takeaway-strip {
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
   text-align: center;
-  padding: 18px 20px;
-}
-
-.takeaway-line {
-  margin: 0;
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 17px;
-  color: var(--navy-900);
+  font-size: 15.5px;
+  color: var(--navy-700);
 }
 
 /* ---------- Saved audits ---------- */
@@ -754,7 +820,7 @@ fieldset {
 .nav-row {
   display: flex;
   gap: 10px;
-  padding: 4px 0 24px;
+  padding: 4px 0 20px;
 }
 
 .nav-row-single .btn-primary,
@@ -766,7 +832,7 @@ fieldset {
 
 .app-footer {
   text-align: center;
-  padding: 16px 20px 28px;
+  padding: 14px 20px 24px;
   font-size: 12px;
   color: var(--ink-soft);
   letter-spacing: 0.02em;
@@ -804,5 +870,34 @@ fieldset {
 @media (min-width: 640px) and (hover: hover) {
   .btn-primary:not(:disabled):hover {
     transform: translateY(-1px);
+  }
+}
+
+/* ---------- Wide viewport: floating card on ambient background ---------- */
+
+@media (min-width: 760px) {
+  html {
+    height: 100%;
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 64px 24px;
+    background:
+      radial-gradient(900px 480px at 18% -8%, rgba(27, 44, 79, 0.09), transparent 60%),
+      radial-gradient(700px 420px at 88% 12%, rgba(201, 162, 39, 0.08), transparent 55%),
+      var(--bg);
+  }
+
+  .app {
+    width: 100%;
+    max-width: 660px;
+    background: var(--surface);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(16, 27, 51, 0.16), 0 2px 10px rgba(16, 27, 51, 0.06);
   }
 }
