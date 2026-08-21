@@ -884,13 +884,22 @@ fieldset {
     min-height: 100vh;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     padding: 48px 24px;
     background:
       radial-gradient(1000px 560px at 14% -6%, rgba(27, 44, 79, 0.16), transparent 62%),
       radial-gradient(760px 480px at 90% 18%, rgba(201, 162, 39, 0.14), transparent 58%),
       radial-gradient(900px 600px at 50% 115%, rgba(27, 44, 79, 0.08), transparent 65%),
       var(--bg);
+  }
+
+  /* Center short steps for visual balance, but only when the card actually
+     fits the viewport — "safe" falls back to flex-start instead of pushing
+     the card (and its rounded top edge) off-screen for taller steps. */
+  @supports (align-items: safe center) {
+    body {
+      align-items: safe center;
+    }
   }
 
   .app {
