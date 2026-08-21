@@ -62,6 +62,10 @@
   var copyConfirm = document.getElementById("copyConfirm");
   var startOverBtn = document.getElementById("startOverBtn");
 
+  var shareToggleRow = document.getElementById("shareToggleRow");
+  var shareToggleInput = document.getElementById("shareToggleInput");
+  var shareConfirm = document.getElementById("shareConfirm");
+
   var savedAuditsSection = document.getElementById("savedAuditsSection");
   var savedAuditsList = document.getElementById("savedAuditsList");
   var clearAuditsBtn = document.getElementById("clearAuditsBtn");
@@ -251,6 +255,7 @@
     updatePromptFades();
     saveAuditToHistory(prompt);
     renderSavedAudits();
+    submitToRoomResults();
     goToStep(4);
   });
 
@@ -426,6 +431,72 @@
   });
 
   /* ---------------------------------------------------
+     Live room results (Firebase — optional, non-blocking)
+  --------------------------------------------------- */
+  var firebaseApp = null;
+  var firestoreDb = null;
+
+  function isFirebaseConfigured() {
+    var cfg = window.FIREBASE_CONFIG;
+    if (!cfg || typeof window.firebase === "undefined") return false;
+    var placeholderPattern = /^PASTE_/;
+    return !placeholderPattern.test(cfg.apiKey || "") &&
+      !placeholderPattern.test(cfg.projectId || "");
+  }
+
+  function getFirestoreDb() {
+    if (firestoreDb) return firestoreDb;
+    try {
+      firebaseApp = window.firebase.apps && window.firebase.apps.length
+        ? window.firebase.apps[0]
+        : window.firebase.initializeApp(window.FIREBASE_CONFIG);
+      firestoreDb = window.firebase.firestore();
+      return firestoreDb;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function pageForShare() {
+    return state.page || "Other";
+  }
+
+  function frictionForShare() {
+    return state.friction.slice();
+  }
+
+  function submitToRoomResults() {
+    if (!shareToggleInput || !shareToggleInput.checked) return;
+    if (!isFirebaseConfigured()) return;
+
+    var db = getFirestoreDb();
+    if (!db) return;
+
+    var collectionName = window.FIREBASE_COLLECTION || "submissions";
+    var entry = {
+      page: pageForShare(),
+      score: computeScore(),
+      flags: flaggedLabels(),
+      friction: frictionForShare(),
+      submittedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    db.collection(collectionName).add(entry).then(
+      function () {
+        if (shareConfirm) shareConfirm.hidden = false;
+      },
+      function () {
+        /* Fails silently — sharing is a bonus, never blocks the core flow */
+      }
+    );
+  }
+
+  function initShareToggleVisibility() {
+    if (!shareToggleRow) return;
+    shareToggleRow.hidden = !isFirebaseConfigured();
+  }
+
+  /* ---------------------------------------------------
      Saved audits (localStorage)
   --------------------------------------------------- */
   function readHistory() {
@@ -551,6 +622,7 @@
       promptOutputWrap.classList.remove("show-fade-top", "show-fade-bottom");
     }
     copyConfirm.classList.remove("is-visible");
+    if (shareConfirm) shareConfirm.hidden = true;
 
     goToStep(1);
   });
@@ -559,5 +631,6 @@
      Init
   --------------------------------------------------- */
   renderSavedAudits();
+  initShareToggleVisibility();
   goToStep(1);
 })();
