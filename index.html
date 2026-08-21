@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIND Audit Prompt Builder</title>
+<meta name="description" content="Build a custom AI website audit prompt using the FIND Framework: Findable, Intuitive, Necessary, Directed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header / FIND letter tracker -->
+  <header class="app-header">
+    <p class="eyebrow">Website Audit Toolkit</p>
+    <h1 class="app-title">FIND Audit<br>Prompt Builder</h1>
+    <p class="app-subtitle">Turn one webpage into a ready-to-use AI audit prompt.</p>
+
+    <ul class="find-tracker" id="findTracker" aria-label="FIND Framework progress">
+      <li class="find-letter" data-letter="F" data-step="2">
+        <span class="letter-glyph">F</span>
+        <span class="letter-label">Findable</span>
+      </li>
+      <li class="find-letter" data-letter="I" data-step="2">
+        <span class="letter-glyph">I</span>
+        <span class="letter-label">Intuitive</span>
+      </li>
+      <li class="find-letter" data-letter="N" data-step="2">
+        <span class="letter-glyph">N</span>
+        <span class="letter-label">Necessary</span>
+      </li>
+      <li class="find-letter" data-letter="D" data-step="2">
+        <span class="letter-glyph">D</span>
+        <span class="letter-label">Directed</span>
+      </li>
+    </ul>
+
+    <div class="step-progress" role="progressbar" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" aria-label="Builder step" id="stepProgress">
+      <div class="step-progress-fill" id="stepProgressFill"></div>
+    </div>
+    <p class="step-caption" id="stepCaption">Step 1 of 4 &middot; Choose a page</p>
+  </header>
+
+  <main class="app-main">
+
+    <!-- STEP 1: Choose a Page -->
+    <section class="step" id="step1" data-step="1" aria-labelledby="step1-heading">
+      <div class="card">
+        <h2 id="step1-heading">Choose a page</h2>
+        <p class="card-hint">Think of one high-use page on your organization's website — one members actually rely on.</p>
+
+        <fieldset class="chip-group" id="pageChoices">
+          <legend class="visually-hidden">Select a page type</legend>
+          <button type="button" class="chip" data-value="Claims">Claims</button>
+          <button type="button" class="chip" data-value="Coverage">Coverage</button>
+          <button type="button" class="chip" data-value="Training">Training</button>
+          <button type="button" class="chip" data-value="Forms">Forms</button>
+          <button type="button" class="chip" data-value="Contact">Contact</button>
+          <button type="button" class="chip" data-value="Member Resources">Member Resources</button>
+          <button type="button" class="chip" data-value="Other">Other</button>
+        </fieldset>
+
+        <div class="field-group" id="otherPageWrap" hidden>
+          <label for="otherPageInput">Describe the page</label>
+          <input type="text" id="otherPageInput" placeholder="e.g. Board Meeting Minutes">
+        </div>
+
+        <div class="field-group">
+          <label for="pageUrl">Page URL <span class="optional-tag">(optional)</span></label>
+          <input type="url" id="pageUrl" placeholder="https://yourorganization.org/page">
+        </div>
+      </div>
+
+      <div class="nav-row nav-row-single">
+        <button type="button" class="btn btn-primary" id="toStep2" disabled>Continue</button>
+      </div>
+    </section>
+
+    <!-- STEP 2: Score the Page -->
+    <section class="step" id="step2" data-step="2" hidden aria-labelledby="step2-heading">
+      <div class="card">
+        <h2 id="step2-heading">Score the page</h2>
+        <p class="card-hint">Answer honestly. A "No" or "Not sure" earns the page one point — points flag where an audit will help most.</p>
+
+        <div class="find-question" data-key="findable">
+          <div class="find-question-label">
+            <span class="find-question-letter">F</span>
+            <div>
+              <p class="find-question-title">Findable</p>
+              <p class="find-question-text">Can members find this page without knowing your department structure?</p>
+            </div>
+          </div>
+          <div class="answer-row" role="radiogroup" aria-label="Findable answer">
+            <button type="button" class="answer-btn" data-answer="Yes">Yes</button>
+            <button type="button" class="answer-btn" data-answer="No">No</button>
+            <button type="button" class="answer-btn" data-answer="Not sure">Not sure</button>
+          </div>
+        </div>
+
+        <div class="find-question" data-key="intuitive">
+          <div class="find-question-label">
+            <span class="find-question-letter">I</span>
+            <div>
+              <p class="find-question-title">Intuitive</p>
+              <p class="find-question-text">Does the navigation make sense without explanation?</p>
+            </div>
+          </div>
+          <div class="answer-row" role="radiogroup" aria-label="Intuitive answer">
+            <button type="button" class="answer-btn" data-answer="Yes">Yes</button>
+            <button type="button" class="answer-btn" data-answer="No">No</button>
+            <button type="button" class="answer-btn" data-answer="Not sure">Not sure</button>
+          </div>
+        </div>
+
+        <div class="find-question" data-key="necessary">
+          <div class="find-question-label">
+            <span class="find-question-letter">N</span>
+            <div>
+              <p class="find-question-title">Necessary</p>
+              <p class="find-question-text">Does the content serve a clear member purpose?</p>
+            </div>
+          </div>
+          <div class="answer-row" role="radiogroup" aria-label="Necessary answer">
+            <button type="button" class="answer-btn" data-answer="Yes">Yes</button>
+            <button type="button" class="answer-btn" data-answer="No">No</button>
+            <button type="button" class="answer-btn" data-answer="Not sure">Not sure</button>
+          </div>
+        </div>
+
+        <div class="find-question" data-key="directed">
+          <div class="find-question-label">
+            <span class="find-question-letter">D</span>
+            <div>
+              <p class="find-question-title">Directed</p>
+              <p class="find-question-text">Does the page clearly guide members to a next step?</p>
+            </div>
+          </div>
+          <div class="answer-row" role="radiogroup" aria-label="Directed answer">
+            <button type="button" class="answer-btn" data-answer="Yes">Yes</button>
+            <button type="button" class="answer-btn" data-answer="No">No</button>
+            <button type="button" class="answer-btn" data-answer="Not sure">Not sure</button>
+          </div>
+        </div>
+
+        <div class="score-summary" id="scoreSummary" hidden>
+          <p class="score-summary-number"><span id="scoreValue">0</span><span class="score-summary-max">/4</span></p>
+          <p class="score-summary-text" id="scoreText"></p>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button type="button" class="btn btn-ghost" id="backStep1">Back</button>
+        <button type="button" class="btn btn-primary" id="toStep3" disabled>Continue</button>
+      </div>
+    </section>
+
+    <!-- STEP 3: Identify Friction -->
+    <section class="step" id="step3" data-step="3" hidden aria-labelledby="step3-heading">
+      <div class="card">
+        <h2 id="step3-heading">Identify friction</h2>
+        <p class="card-hint">Select anything that applies. This tells the AI where to focus.</p>
+
+        <fieldset class="checkbox-group" id="frictionChoices">
+          <legend class="visually-hidden">Friction points</legend>
+          <label class="checkbox-chip"><input type="checkbox" value="Outdated content"><span>Outdated content</span></label>
+          <label class="checkbox-chip"><input type="checkbox" value="Internal language"><span>Internal language</span></label>
+          <label class="checkbox-chip"><input type="checkbox" value="Too many links"><span>Too many links</span></label>
+          <label class="checkbox-chip"><input type="checkbox" value="Hidden important information"><span>Hidden important information</span></label>
+          <label class="checkbox-chip"><input type="checkbox" value="Missing call to action"><span>Missing call to action</span></label>
+          <label class="checkbox-chip"><input type="checkbox" value="Inconsistent tone"><span>Inconsistent tone</span></label>
+          <label class="checkbox-chip"><input type="checkbox" value="Confusing navigation"><span>Confusing navigation</span></label>
+          <label class="checkbox-chip"><input type="checkbox" value="Not mobile-friendly"><span>Not mobile-friendly</span></label>
+          <label class="checkbox-chip"><input type="checkbox" value="Needs accessibility review"><span>Needs accessibility review</span></label>
+          <label class="checkbox-chip"><input type="checkbox" value="Other"><span>Other</span></label>
+        </fieldset>
+
+        <div class="field-group" id="otherFrictionWrap" hidden>
+          <label for="otherFrictionInput">Describe the friction</label>
+          <input type="text" id="otherFrictionInput" placeholder="e.g. Broken form submission">
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button type="button" class="btn btn-ghost" id="backStep2">Back</button>
+        <button type="button" class="btn btn-primary" id="toStep4">Generate prompt</button>
+      </div>
+    </section>
+
+    <!-- STEP 4: Generated Prompt -->
+    <section class="step" id="step4" data-step="4" hidden aria-labelledby="step4-heading">
+      <div class="card">
+        <h2 id="step4-heading">Your audit prompt</h2>
+        <p class="card-hint">Copy this into your AI tool of choice, along with the page content if no URL was provided.</p>
+
+        <label for="promptOutput" class="visually-hidden">Generated AI audit prompt</label>
+        <textarea id="promptOutput" class="prompt-output" rows="14" readonly></textarea>
+
+        <div class="copy-row">
+          <button type="button" class="btn btn-primary" id="copyPromptBtn">Copy prompt</button>
+          <span class="copy-confirm" id="copyConfirm" role="status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <div class="card takeaway-card">
+        <p class="takeaway-line">Better input creates a better audit.</p>
+      </div>
+
+      <div class="nav-row nav-row-single">
+        <button type="button" class="btn btn-ghost" id="startOverBtn">Start over</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>FIND Framework &middot; Findable &middot; Intuitive &middot; Necessary &middot; Directed</p>
+  </footer>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
