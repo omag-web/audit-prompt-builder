@@ -77,6 +77,13 @@
 
   </main>
 
+  <!-- Hidden by default. Only shown by results.js when the URL has
+       ?manage=1 — never visible on the plain projector URL. -->
+  <div class="admin-bar" id="adminBar" hidden>
+    <button type="button" class="admin-clear-btn" id="adminClearBtn">Clear all results</button>
+    <span class="admin-status" id="adminStatus"></span>
+  </div>
+
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
