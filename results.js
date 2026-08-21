@@ -19,6 +19,14 @@
   var frictionList = document.getElementById("frictionList");
   var activityList = document.getElementById("activityList");
 
+  var adminBar = document.getElementById("adminBar");
+  var adminClearBtn = document.getElementById("adminClearBtn");
+  var adminStatus = document.getElementById("adminStatus");
+
+  var dbRef = null;
+  var collectionNameRef = "submissions";
+  var lastTotal = 0;
+
   function setStatus(state, text) {
     statusDot.classList.remove("is-live", "is-error");
     if (state === "live") statusDot.classList.add("is-live");
@@ -110,6 +118,8 @@
      Render
   --------------------------------------------------- */
   function render(docs) {
+    lastTotal = docs.length;
+
     if (docs.length === 0) {
       waitingState.hidden = false;
       wallMain.hidden = true;
@@ -191,6 +201,8 @@
         : window.firebase.initializeApp(window.FIREBASE_CONFIG);
       var db = window.firebase.firestore(app);
       var collectionName = window.FIREBASE_COLLECTION || "submissions";
+      dbRef = db;
+      collectionNameRef = collectionName;
 
       buildLetterBarSkeleton();
       setStatus("connecting", "Connecting\u2026");
@@ -208,11 +220,67 @@
           console.warn("Live results listener error:", err);
         }
       );
+
+      initAdminBar();
     } catch (err) {
       notConfiguredState.hidden = false;
       setStatus("error", "Not connected");
       console.warn("Firebase init failed:", err);
     }
+  }
+
+  /* ---------------------------------------------------
+     Admin bar (only visible with ?manage=1 in the URL)
+  --------------------------------------------------- */
+  function initAdminBar() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("manage") !== "1") return;
+
+    adminBar.hidden = false;
+
+    adminClearBtn.addEventListener("click", function () {
+      var confirmed = window.confirm(
+        "Delete all " + lastTotal + " submission" + (lastTotal === 1 ? "" : "s") +
+        " from the live results? This can't be undone."
+      );
+      if (!confirmed) return;
+
+      adminClearBtn.disabled = true;
+      adminStatus.textContent = "Clearing\u2026";
+
+      clearAllResults(dbRef, collectionNameRef).then(
+        function (count) {
+          adminStatus.textContent = "Cleared " + count + " submission" + (count === 1 ? "" : "s") + ".";
+          adminClearBtn.disabled = false;
+        },
+        function (err) {
+          adminStatus.textContent = "Delete failed \u2014 check console.";
+          adminClearBtn.disabled = false;
+          console.warn("Clear results failed:", err);
+        }
+      );
+    });
+  }
+
+  function clearAllResults(db, collectionName) {
+    return db.collection(collectionName).get().then(function (snapshot) {
+      var docs = snapshot.docs;
+      if (docs.length === 0) return 0;
+
+      var chunkSize = 450; // stay under Firestore's 500-writes-per-batch limit
+      var chunks = [];
+      for (var i = 0; i < docs.length; i += chunkSize) {
+        chunks.push(docs.slice(i, i + chunkSize));
+      }
+
+      var batchPromises = chunks.map(function (chunk) {
+        var batch = db.batch();
+        chunk.forEach(function (docSnap) { batch.delete(docSnap.ref); });
+        return batch.commit();
+      });
+
+      return Promise.all(batchPromises).then(function () { return docs.length; });
+    });
   }
 
   init();
