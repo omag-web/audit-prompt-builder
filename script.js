@@ -2,24 +2,32 @@
   "use strict";
 
   /* ---------------------------------------------------
-     State
+     Constants
   --------------------------------------------------- */
-  var state = {
-    page: null,
-    otherPage: "",
-    url: "",
-    answers: {
-      findable: null,
-      intuitive: null,
-      necessary: null,
-      directed: null
-    },
-    friction: [],
-    otherFriction: ""
-  };
-
   var QUESTION_ORDER = ["findable", "intuitive", "necessary", "directed"];
   var LETTER_FOR_KEY = { findable: "F", intuitive: "I", necessary: "N", directed: "D" };
+  var LABEL_FOR_KEY = { findable: "Findable", intuitive: "Intuitive", necessary: "Necessary", directed: "Directed" };
+  var FRICTION_PROMPT_TEXT = {
+    "Needs accessibility review": "accessibility concerns"
+  };
+  var HISTORY_KEY = "findAuditHistory";
+  var HISTORY_LIMIT = 25;
+
+  /* ---------------------------------------------------
+     State (current in-progress audit)
+  --------------------------------------------------- */
+  function freshState() {
+    return {
+      page: null,
+      otherPage: "",
+      url: "",
+      answers: { findable: null, intuitive: null, necessary: null, directed: null },
+      friction: [],
+      otherFriction: ""
+    };
+  }
+
+  var state = freshState();
 
   /* ---------------------------------------------------
      Element refs
@@ -49,8 +57,14 @@
 
   var promptOutput = document.getElementById("promptOutput");
   var copyPromptBtn = document.getElementById("copyPromptBtn");
+  var downloadPromptBtn = document.getElementById("downloadPromptBtn");
   var copyConfirm = document.getElementById("copyConfirm");
   var startOverBtn = document.getElementById("startOverBtn");
+
+  var savedAuditsSection = document.getElementById("savedAuditsSection");
+  var savedAuditsList = document.getElementById("savedAuditsList");
+  var clearAuditsBtn = document.getElementById("clearAuditsBtn");
+  var savedAuditItemTemplate = document.getElementById("savedAuditItemTemplate");
 
   var STEP_CAPTIONS = {
     1: "Step 1 of 4 \u00B7 Choose a page",
@@ -73,11 +87,7 @@
     stepProgressFill.style.width = pct + "%";
     stepProgress.setAttribute("aria-valuenow", String(stepNumber));
     stepCaption.textContent = STEP_CAPTIONS[stepNumber];
-
-    var mainEl = document.querySelector(".app-main");
-    if (mainEl) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   /* ---------------------------------------------------
@@ -161,6 +171,15 @@
     return score;
   }
 
+  function flaggedLabels() {
+    return QUESTION_ORDER
+      .filter(function (key) {
+        var a = state.answers[key];
+        return a === "No" || a === "Not sure";
+      })
+      .map(function (key) { return LABEL_FOR_KEY[key]; });
+  }
+
   function updateScoreSummary() {
     var answeredCount = QUESTION_ORDER.filter(function (k) { return state.answers[k] !== null; }).length;
     if (answeredCount === 0) {
@@ -223,27 +242,43 @@
   backStep2Btn.addEventListener("click", function () { goToStep(2); });
 
   toStep4Btn.addEventListener("click", function () {
-    buildPrompt();
+    var prompt = buildPrompt();
+    promptOutput.value = prompt;
+    saveAuditToHistory(prompt);
+    renderSavedAudits();
     goToStep(4);
   });
 
   /* ---------------------------------------------------
-     Step 4: prompt generation
+     Prompt generation
   --------------------------------------------------- */
+  function frictionPhrase(value) {
+    return (FRICTION_PROMPT_TEXT[value] || value).toLowerCase();
+  }
+
   function frictionList() {
-    var items = state.friction.filter(function (v) { return v !== "Other"; });
+    var items = state.friction
+      .filter(function (v) { return v !== "Other"; })
+      .map(frictionPhrase);
     if (state.friction.indexOf("Other") !== -1 && state.otherFriction) {
-      items.push(state.otherFriction);
+      items.push(state.otherFriction.toLowerCase());
     }
     if (items.length === 0) {
       return "general usability and clarity";
     }
-    return items.join(", ").toLowerCase();
+    return items.join(", ");
   }
 
   function pageLabel() {
     if (state.page === "Other" && state.otherPage) return state.otherPage;
     return state.page || "this page";
+  }
+
+  function scoreLine() {
+    var score = computeScore();
+    var flags = flaggedLabels();
+    var flagText = flags.length > 0 ? " (flagged: " + flags.join(", ") + ")" : " (no flags)";
+    return "Internal FIND score: " + score + "/4" + flagText;
   }
 
   function buildPrompt() {
@@ -253,9 +288,15 @@
       : "I will paste the page content below.";
 
     var lines = [
-      "Act as a member-experience website auditor. Review this webpage using the FIND Framework: Findable, Intuitive, Necessary, and Directed.",
+      "Act as a member-experience website auditor. Review this webpage using the FIND Framework:",
+      "",
+      "Findable: Can members quickly locate this page or information without knowing our internal department structure?",
+      "Intuitive: Does the navigation, wording, and page structure make sense without explanation?",
+      "Necessary: Does the content serve a clear member purpose, or is it outdated, duplicated, or unnecessary?",
+      "Directed: Does the page clearly guide members toward the next step?",
       "",
       "Page: " + pageLabel(),
+      scoreLine(),
       "",
       "Evaluate whether the page is easy for members to find, understand, use, and act on. Focus especially on: " + focusList + ".",
       "",
@@ -269,7 +310,52 @@
       pageRef
     ];
 
-    promptOutput.value = lines.join("\n");
+    return lines.join("\n");
+  }
+
+  /* ---------------------------------------------------
+     Copy / Download
+  --------------------------------------------------- */
+  function showConfirm(msg) {
+    copyConfirm.textContent = msg;
+    copyConfirm.classList.add("is-visible");
+    window.setTimeout(function () {
+      copyConfirm.classList.remove("is-visible");
+    }, 2200);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return Promise.reject(new Error("Clipboard API unavailable"));
+  }
+
+  function copyTextWithFallback(text, onSuccess, onFallback) {
+    copyText(text).then(onSuccess, function () {
+      var temp = document.createElement("textarea");
+      temp.value = text;
+      temp.setAttribute("readonly", "");
+      temp.style.position = "fixed";
+      temp.style.top = "-1000px";
+      temp.style.left = "-1000px";
+      document.body.appendChild(temp);
+      temp.focus();
+      temp.select();
+      temp.setSelectionRange(0, temp.value.length);
+      var ok = false;
+      try {
+        ok = document.execCommand("copy");
+      } catch (err) {
+        ok = false;
+      }
+      document.body.removeChild(temp);
+      if (ok) {
+        onSuccess();
+      } else {
+        onFallback();
+      }
+    });
   }
 
   copyPromptBtn.addEventListener("click", function () {
@@ -277,41 +363,140 @@
     promptOutput.select();
     promptOutput.setSelectionRange(0, promptOutput.value.length);
 
-    var showConfirm = function (msg) {
-      copyConfirm.textContent = msg;
-      copyConfirm.classList.add("is-visible");
-      window.setTimeout(function () {
-        copyConfirm.classList.remove("is-visible");
-      }, 2200);
-    };
+    copyTextWithFallback(
+      promptOutput.value,
+      function () { showConfirm("Copied to clipboard"); },
+      function () { showConfirm("Prompt selected \u2014 copy with Ctrl/Cmd+C"); }
+    );
+  });
 
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(promptOutput.value).then(
-        function () { showConfirm("Copied to clipboard"); },
-        function () { showConfirm("Prompt selected \u2014 copy with Ctrl/Cmd+C"); }
-      );
-    } else {
-      try {
-        var ok = document.execCommand("copy");
-        showConfirm(ok ? "Copied to clipboard" : "Prompt selected \u2014 copy with Ctrl/Cmd+C");
-      } catch (err) {
-        showConfirm("Prompt selected \u2014 copy with Ctrl/Cmd+C");
-      }
+  function slugify(text) {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "page";
+  }
+
+  function downloadText(filename, text) {
+    var blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  downloadPromptBtn.addEventListener("click", function () {
+    if (!promptOutput.value) return;
+    var filename = "find-audit-" + slugify(pageLabel()) + ".txt";
+    try {
+      downloadText(filename, promptOutput.value);
+      showConfirm("Downloaded " + filename);
+    } catch (err) {
+      showConfirm("Download unavailable \u2014 copy the prompt instead");
     }
   });
 
   /* ---------------------------------------------------
-     Start over
+     Saved audits (localStorage)
+  --------------------------------------------------- */
+  function readHistory() {
+    try {
+      var raw = window.localStorage.getItem(HISTORY_KEY);
+      var parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function writeHistory(list) {
+    try {
+      window.localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+    } catch (err) {
+      /* localStorage unavailable (private browsing, quota, etc.) — fail silently */
+    }
+  }
+
+  function saveAuditToHistory(prompt) {
+    var history = readHistory();
+    var entry = {
+      id: "audit-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+      page: pageLabel(),
+      url: state.url || "",
+      score: computeScore(),
+      flags: flaggedLabels(),
+      prompt: prompt,
+      savedAt: new Date().toISOString()
+    };
+    history.unshift(entry);
+    if (history.length > HISTORY_LIMIT) {
+      history = history.slice(0, HISTORY_LIMIT);
+    }
+    writeHistory(history);
+  }
+
+  function formatSavedAt(isoString) {
+    try {
+      var d = new Date(isoString);
+      return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+        " \u00B7 " +
+        d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    } catch (err) {
+      return "";
+    }
+  }
+
+  function renderSavedAudits() {
+    var history = readHistory();
+    savedAuditsList.innerHTML = "";
+
+    if (history.length === 0) {
+      savedAuditsSection.hidden = true;
+      return;
+    }
+
+    savedAuditsSection.hidden = false;
+
+    history.forEach(function (entry) {
+      var node = savedAuditItemTemplate.content.cloneNode(true);
+      var li = node.querySelector(".saved-audit-item");
+      li.setAttribute("data-id", entry.id);
+      node.querySelector(".saved-audit-page").textContent = entry.page;
+      node.querySelector(".saved-audit-meta").textContent =
+        entry.score + "/4 \u00B7 " + formatSavedAt(entry.savedAt);
+
+      node.querySelector(".saved-audit-copy").addEventListener("click", function () {
+        copyTextWithFallback(
+          entry.prompt,
+          function () { showConfirm("Copied \u201C" + entry.page + "\u201D prompt"); },
+          function () { showConfirm("Copy unavailable \u2014 use Download on the current prompt instead"); }
+        );
+      });
+
+      node.querySelector(".saved-audit-delete").addEventListener("click", function () {
+        var remaining = readHistory().filter(function (e) { return e.id !== entry.id; });
+        writeHistory(remaining);
+        renderSavedAudits();
+      });
+
+      savedAuditsList.appendChild(node);
+    });
+  }
+
+  clearAuditsBtn.addEventListener("click", function () {
+    writeHistory([]);
+    renderSavedAudits();
+  });
+
+  /* ---------------------------------------------------
+     Audit another page (resets current form, keeps history)
   --------------------------------------------------- */
   startOverBtn.addEventListener("click", function () {
-    state = {
-      page: null,
-      otherPage: "",
-      url: "",
-      answers: { findable: null, intuitive: null, necessary: null, directed: null },
-      friction: [],
-      otherFriction: ""
-    };
+    state = freshState();
 
     pageChoices.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("is-selected"); });
     otherPageWrap.hidden = true;
@@ -345,5 +530,6 @@
   /* ---------------------------------------------------
      Init
   --------------------------------------------------- */
+  renderSavedAudits();
   goToStep(1);
 })();
