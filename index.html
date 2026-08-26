@@ -9,6 +9,31 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<style>
+  /* Manual-entry callout — additive, theme-agnostic so it drops into
+     any color scheme in styles.css without a collision. Restyle freely
+     with your own design tokens if you want it to match exactly. */
+  .manual-entry-callout{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    border-left:3px solid #b8860b;
+    background:rgba(184,134,11,0.08);
+    border-radius:4px;
+    padding:12px 14px;
+    margin:0 0 18px;
+  }
+  .manual-entry-callout-icon{
+    font-size:1.05rem;
+    line-height:1.4;
+    flex-shrink:0;
+  }
+  .manual-entry-callout p{
+    margin:0;
+    font-size:0.92rem;
+    line-height:1.5;
+  }
+</style>
 </head>
 <body>
 
@@ -218,7 +243,12 @@
     <section class="step" id="step4" data-step="4" hidden aria-labelledby="step4-heading">
       <div class="card">
         <h2 id="step4-heading">Your audit prompt</h2>
-        <p class="card-hint">Copy this into your AI tool of choice, along with the page content if no URL was provided.</p>
+        <p class="card-hint">Paste this into your AI tool of choice to run the audit.</p>
+
+        <div class="manual-entry-callout" id="manualEntryCallout" role="note" hidden>
+          <span class="manual-entry-callout-icon" aria-hidden="true">&#9888;&#65039;</span>
+          <p id="manualEntryText"></p>
+        </div>
 
         <label for="promptOutput" class="visually-hidden">Generated AI audit prompt</label>
         <div class="prompt-output-wrap" id="promptOutputWrap">
