@@ -1,304 +1,724 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FIND Audit Prompt Builder</title>
-<meta name="description" content="Build a custom AI website audit prompt using the FIND Framework: Findable, Intuitive, Necessary, Directed.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
-<style>
-  /* Manual-entry callout — additive, theme-agnostic so it drops into
-     any color scheme in styles.css without a collision. Restyle freely
-     with your own design tokens if you want it to match exactly. */
-  .manual-entry-callout{
-    display:flex;
-    gap:10px;
-    align-items:flex-start;
-    border-left:3px solid #b8860b;
-    background:rgba(184,134,11,0.08);
-    border-radius:4px;
-    padding:12px 14px;
-    margin:0 0 18px;
+(function () {
+  "use strict";
+
+  /* ---------------------------------------------------
+     Constants
+  --------------------------------------------------- */
+  var QUESTION_ORDER = ["findable", "intuitive", "necessary", "directed"];
+  var LETTER_FOR_KEY = { findable: "F", intuitive: "I", necessary: "N", directed: "D" };
+  var LABEL_FOR_KEY = { findable: "Findable", intuitive: "Intuitive", necessary: "Necessary", directed: "Directed" };
+  var FRICTION_PROMPT_TEXT = {
+    "Needs accessibility review": "accessibility concerns"
+  };
+  var HISTORY_KEY = "findAuditHistory";
+  var HISTORY_LIMIT = 25;
+
+  /* ---------------------------------------------------
+     State (current in-progress audit)
+  --------------------------------------------------- */
+  function freshState() {
+    return {
+      page: null,
+      otherPage: "",
+      url: "",
+      answers: { findable: null, intuitive: null, necessary: null, directed: null },
+      friction: [],
+      otherFriction: ""
+    };
   }
-  .manual-entry-callout-icon{
-    font-size:1.05rem;
-    line-height:1.4;
-    flex-shrink:0;
+
+  var state = freshState();
+
+  /* ---------------------------------------------------
+     Element refs
+  --------------------------------------------------- */
+  var stepProgressFill = document.getElementById("stepProgressFill");
+  var stepProgress = document.getElementById("stepProgress");
+  var stepCaption = document.getElementById("stepCaption");
+  var findTracker = document.getElementById("findTracker");
+
+  var pageChoices = document.getElementById("pageChoices");
+  var otherPageWrap = document.getElementById("otherPageWrap");
+  var otherPageInput = document.getElementById("otherPageInput");
+  var pageUrlInput = document.getElementById("pageUrl");
+  var toStep2Btn = document.getElementById("toStep2");
+
+  var toStep3Btn = document.getElementById("toStep3");
+  var backStep1Btn = document.getElementById("backStep1");
+  var scoreSummary = document.getElementById("scoreSummary");
+  var scoreValueEl = document.getElementById("scoreValue");
+  var scoreTextEl = document.getElementById("scoreText");
+
+  var frictionChoices = document.getElementById("frictionChoices");
+  var otherFrictionWrap = document.getElementById("otherFrictionWrap");
+  var otherFrictionInput = document.getElementById("otherFrictionInput");
+  var backStep2Btn = document.getElementById("backStep2");
+  var toStep4Btn = document.getElementById("toStep4");
+
+  var promptOutput = document.getElementById("promptOutput");
+  var promptOutputWrap = document.getElementById("promptOutputWrap");
+  var copyPromptBtn = document.getElementById("copyPromptBtn");
+  var downloadPromptBtn = document.getElementById("downloadPromptBtn");
+  var copyConfirm = document.getElementById("copyConfirm");
+  var startOverBtn = document.getElementById("startOverBtn");
+
+  var shareToggleRow = document.getElementById("shareToggleRow");
+  var shareToggleInput = document.getElementById("shareToggleInput");
+  var shareConfirm = document.getElementById("shareConfirm");
+
+  var manualEntryCallout = document.getElementById("manualEntryCallout");
+  var manualEntryText = document.getElementById("manualEntryText");
+
+  var savedAuditsSection = document.getElementById("savedAuditsSection");
+  var savedAuditsList = document.getElementById("savedAuditsList");
+  var clearAuditsBtn = document.getElementById("clearAuditsBtn");
+  var savedAuditItemTemplate = document.getElementById("savedAuditItemTemplate");
+
+  var STEP_CAPTIONS = {
+    1: "Step 1 of 4 \u00B7 Choose a page",
+    2: "Step 2 of 4 \u00B7 Score the page",
+    3: "Step 3 of 4 \u00B7 Identify friction",
+    4: "Step 4 of 4 \u00B7 Your prompt"
+  };
+
+  /* ---------------------------------------------------
+     Step navigation
+  --------------------------------------------------- */
+  function goToStep(stepNumber) {
+    var steps = document.querySelectorAll(".step");
+    for (var i = 0; i < steps.length; i++) {
+      var s = steps[i];
+      var num = parseInt(s.getAttribute("data-step"), 10);
+      s.hidden = num !== stepNumber;
+    }
+    var pct = (stepNumber / 4) * 100;
+    stepProgressFill.style.width = pct + "%";
+    stepProgress.setAttribute("aria-valuenow", String(stepNumber));
+    stepCaption.textContent = STEP_CAPTIONS[stepNumber];
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  .manual-entry-callout p{
-    margin:0;
-    font-size:0.92rem;
-    line-height:1.5;
+
+  /* ---------------------------------------------------
+     Step 1: page selection
+  --------------------------------------------------- */
+  pageChoices.addEventListener("click", function (e) {
+    var chip = e.target.closest(".chip");
+    if (!chip) return;
+
+    var chips = pageChoices.querySelectorAll(".chip");
+    chips.forEach(function (c) { c.classList.remove("is-selected"); });
+    chip.classList.add("is-selected");
+
+    state.page = chip.getAttribute("data-value");
+
+    var isOther = state.page === "Other";
+    otherPageWrap.hidden = !isOther;
+    if (isOther) {
+      otherPageInput.focus();
+    }
+
+    updateStep1Validity();
+  });
+
+  otherPageInput.addEventListener("input", function () {
+    state.otherPage = otherPageInput.value.trim();
+    updateStep1Validity();
+  });
+
+  pageUrlInput.addEventListener("input", function () {
+    state.url = pageUrlInput.value.trim();
+  });
+
+  function updateStep1Validity() {
+    var valid = !!state.page && (state.page !== "Other" || state.otherPage.length > 0);
+    toStep2Btn.disabled = !valid;
   }
-</style>
-</head>
-<body>
 
-<div class="app">
+  toStep2Btn.addEventListener("click", function () {
+    goToStep(2);
+  });
 
-  <!-- Header / FIND letter tracker -->
-  <header class="app-header">
-    <p class="eyebrow">Website Audit Toolkit</p>
-    <h1 class="app-title">FIND Audit<br>Prompt Builder</h1>
-    <p class="app-subtitle">Turn one webpage into a ready-to-use AI audit prompt.</p>
+  /* ---------------------------------------------------
+     Step 2: FIND scoring
+  --------------------------------------------------- */
+  var findQuestionEls = document.querySelectorAll(".find-question");
 
-    <ul class="find-tracker" id="findTracker" aria-label="FIND Framework progress">
-      <li class="find-letter" data-letter="F" data-step="2">
-        <span class="letter-glyph">F</span>
-        <span class="letter-label">Findable</span>
-      </li>
-      <li class="find-letter" data-letter="I" data-step="2">
-        <span class="letter-glyph">I</span>
-        <span class="letter-label">Intuitive</span>
-      </li>
-      <li class="find-letter" data-letter="N" data-step="2">
-        <span class="letter-glyph">N</span>
-        <span class="letter-label">Necessary</span>
-      </li>
-      <li class="find-letter" data-letter="D" data-step="2">
-        <span class="letter-glyph">D</span>
-        <span class="letter-label">Directed</span>
-      </li>
-    </ul>
+  findQuestionEls.forEach(function (qEl) {
+    var key = qEl.getAttribute("data-key");
+    var buttons = qEl.querySelectorAll(".answer-btn");
 
-    <div class="step-progress" role="progressbar" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" aria-label="Builder step" id="stepProgress">
-      <div class="step-progress-fill" id="stepProgressFill"></div>
-    </div>
-    <p class="step-caption" id="stepCaption">Step 1 of 4 &middot; Choose a page</p>
-  </header>
+    buttons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        buttons.forEach(function (b) { b.classList.remove("is-selected"); });
+        btn.classList.add("is-selected");
+        state.answers[key] = btn.getAttribute("data-answer");
+        updateFindTracker(key, state.answers[key]);
+        updateScoreSummary();
+        updateStep2Validity();
+      });
+    });
+  });
 
-  <main class="app-main">
+  function updateFindTracker(key, answer) {
+    var letterEl = findTracker.querySelector('[data-letter="' + LETTER_FOR_KEY[key] + '"]');
+    if (!letterEl) return;
+    letterEl.classList.add("is-answered");
+    if (answer === "No" || answer === "Not sure") {
+      letterEl.classList.add("is-flagged");
+      letterEl.classList.remove("is-clean");
+    } else {
+      letterEl.classList.add("is-clean");
+      letterEl.classList.remove("is-flagged");
+    }
+  }
 
-    <!-- STEP 1: Choose a Page -->
-    <section class="step" id="step1" data-step="1" aria-labelledby="step1-heading">
-      <div class="card">
-        <h2 id="step1-heading">Choose a page</h2>
-        <p class="card-hint">Think of one high-use page on your organization's website — one members actually rely on.</p>
+  function computeScore() {
+    var score = 0;
+    QUESTION_ORDER.forEach(function (key) {
+      var a = state.answers[key];
+      if (a === "No" || a === "Not sure") score += 1;
+    });
+    return score;
+  }
 
-        <fieldset class="chip-group" id="pageChoices">
-          <legend class="visually-hidden">Select a page type</legend>
-          <button type="button" class="chip" data-value="Claims">Claims</button>
-          <button type="button" class="chip" data-value="Coverage">Coverage</button>
-          <button type="button" class="chip" data-value="Training">Training</button>
-          <button type="button" class="chip" data-value="Forms">Forms</button>
-          <button type="button" class="chip" data-value="Contact">Contact</button>
-          <button type="button" class="chip" data-value="Member Resources">Member Resources</button>
-          <button type="button" class="chip" data-value="Other">Other</button>
-        </fieldset>
+  function flaggedLabels() {
+    return QUESTION_ORDER
+      .filter(function (key) {
+        var a = state.answers[key];
+        return a === "No" || a === "Not sure";
+      })
+      .map(function (key) { return LABEL_FOR_KEY[key]; });
+  }
 
-        <div class="field-group" id="otherPageWrap" hidden>
-          <label for="otherPageInput">Describe the page</label>
-          <input type="text" id="otherPageInput" placeholder="e.g. Board Meeting Minutes">
-        </div>
+  function updateScoreSummary() {
+    var answeredCount = QUESTION_ORDER.filter(function (k) { return state.answers[k] !== null; }).length;
+    if (answeredCount === 0) {
+      scoreSummary.hidden = true;
+      return;
+    }
+    scoreSummary.hidden = false;
+    var score = computeScore();
+    scoreValueEl.textContent = String(score);
 
-        <div class="field-group">
-          <label for="pageUrl">Page URL <span class="optional-tag">(optional)</span></label>
-          <input type="url" id="pageUrl" placeholder="https://yourorganization.org/page">
-        </div>
+    var recommendation;
+    if (score <= 1) {
+      recommendation = "This page may only need a light review.";
+    } else if (score <= 3) {
+      recommendation = "This page is a good candidate for an AI-assisted audit.";
+    } else {
+      recommendation = "This page is a strong candidate for a deeper AI-assisted review.";
+    }
+    scoreTextEl.textContent = recommendation;
+  }
 
-        <details class="find-info">
-          <summary>What is FIND?</summary>
-          <dl class="find-info-list">
-            <div><dt>Findable</dt><dd>Can members quickly locate this page without knowing your department structure?</dd></div>
-            <div><dt>Intuitive</dt><dd>Does the navigation and wording make sense without explanation?</dd></div>
-            <div><dt>Necessary</dt><dd>Does the content serve a clear member purpose?</dd></div>
-            <div><dt>Directed</dt><dd>Does the page clearly guide members to a next step?</dd></div>
-          </dl>
-        </details>
-      </div>
+  function updateStep2Validity() {
+    var allAnswered = QUESTION_ORDER.every(function (k) { return state.answers[k] !== null; });
+    toStep3Btn.disabled = !allAnswered;
+  }
 
-      <div class="nav-row nav-row-single">
-        <button type="button" class="btn btn-primary" id="toStep2" disabled>Continue</button>
-      </div>
-    </section>
+  backStep1Btn.addEventListener("click", function () { goToStep(1); });
+  toStep3Btn.addEventListener("click", function () { goToStep(3); });
 
-    <!-- STEP 2: Score the Page -->
-    <section class="step" id="step2" data-step="2" hidden aria-labelledby="step2-heading">
-      <div class="card">
-        <h2 id="step2-heading">Score the page</h2>
-        <p class="card-hint">Answer honestly. A "No" or "Not sure" earns the page one point — points flag where an audit will help most.</p>
+  /* ---------------------------------------------------
+     Step 3: friction points
+  --------------------------------------------------- */
+  frictionChoices.addEventListener("change", function (e) {
+    var input = e.target;
+    if (input.type !== "checkbox") return;
 
-        <div class="find-question" data-key="findable">
-          <div class="find-question-label">
-            <span class="find-question-letter">F</span>
-            <div>
-              <p class="find-question-title">Findable</p>
-              <p class="find-question-text">Can members find this page without knowing your department structure?</p>
-            </div>
-          </div>
-          <div class="answer-row" role="radiogroup" aria-label="Findable answer">
-            <button type="button" class="answer-btn" data-answer="Yes">Yes</button>
-            <button type="button" class="answer-btn" data-answer="No">No</button>
-            <button type="button" class="answer-btn" data-answer="Not sure">Not sure</button>
-          </div>
-        </div>
+    var label = input.closest(".checkbox-chip");
+    if (label) {
+      label.classList.toggle("is-checked", input.checked);
+    }
 
-        <div class="find-question" data-key="intuitive">
-          <div class="find-question-label">
-            <span class="find-question-letter">I</span>
-            <div>
-              <p class="find-question-title">Intuitive</p>
-              <p class="find-question-text">Does the navigation make sense without explanation?</p>
-            </div>
-          </div>
-          <div class="answer-row" role="radiogroup" aria-label="Intuitive answer">
-            <button type="button" class="answer-btn" data-answer="Yes">Yes</button>
-            <button type="button" class="answer-btn" data-answer="No">No</button>
-            <button type="button" class="answer-btn" data-answer="Not sure">Not sure</button>
-          </div>
-        </div>
+    var value = input.value;
+    if (input.checked) {
+      if (state.friction.indexOf(value) === -1) state.friction.push(value);
+    } else {
+      state.friction = state.friction.filter(function (v) { return v !== value; });
+    }
 
-        <div class="find-question" data-key="necessary">
-          <div class="find-question-label">
-            <span class="find-question-letter">N</span>
-            <div>
-              <p class="find-question-title">Necessary</p>
-              <p class="find-question-text">Does the content serve a clear member purpose?</p>
-            </div>
-          </div>
-          <div class="answer-row" role="radiogroup" aria-label="Necessary answer">
-            <button type="button" class="answer-btn" data-answer="Yes">Yes</button>
-            <button type="button" class="answer-btn" data-answer="No">No</button>
-            <button type="button" class="answer-btn" data-answer="Not sure">Not sure</button>
-          </div>
-        </div>
+    var otherChecked = state.friction.indexOf("Other") !== -1;
+    otherFrictionWrap.hidden = !otherChecked;
+    if (otherChecked) {
+      otherFrictionInput.focus();
+    }
+  });
 
-        <div class="find-question" data-key="directed">
-          <div class="find-question-label">
-            <span class="find-question-letter">D</span>
-            <div>
-              <p class="find-question-title">Directed</p>
-              <p class="find-question-text">Does the page clearly guide members to a next step?</p>
-            </div>
-          </div>
-          <div class="answer-row" role="radiogroup" aria-label="Directed answer">
-            <button type="button" class="answer-btn" data-answer="Yes">Yes</button>
-            <button type="button" class="answer-btn" data-answer="No">No</button>
-            <button type="button" class="answer-btn" data-answer="Not sure">Not sure</button>
-          </div>
-        </div>
+  otherFrictionInput.addEventListener("input", function () {
+    state.otherFriction = otherFrictionInput.value.trim();
+  });
 
-        <div class="score-summary" id="scoreSummary" hidden>
-          <p class="score-summary-number"><span id="scoreValue">0</span><span class="score-summary-max">/4</span></p>
-          <div>
-            <p class="score-summary-text" id="scoreText"></p>
-            <p class="score-summary-note">"No" and "Not sure" both flag the page for review.</p>
-          </div>
-        </div>
-      </div>
+  backStep2Btn.addEventListener("click", function () { goToStep(2); });
 
-      <div class="nav-row">
-        <button type="button" class="btn btn-ghost" id="backStep1">Back</button>
-        <button type="button" class="btn btn-primary" id="toStep3" disabled>Continue</button>
-      </div>
-    </section>
+  toStep4Btn.addEventListener("click", function () {
+    var prompt = buildPrompt();
+    promptOutput.value = prompt;
+    promptOutput.scrollTop = 0;
+    updatePromptFades();
+    updateManualEntryCallout();
+    saveAuditToHistory(prompt);
+    renderSavedAudits();
+    submitToRoomResults();
+    goToStep(4);
+  });
 
-    <!-- STEP 3: Identify Friction -->
-    <section class="step" id="step3" data-step="3" hidden aria-labelledby="step3-heading">
-      <div class="card">
-        <h2 id="step3-heading">Identify friction</h2>
-        <p class="card-hint">Select anything that applies. This tells the AI where to focus.</p>
+  /* ---------------------------------------------------
+     Prompt generation
+  --------------------------------------------------- */
+  function frictionPhrase(value) {
+    return (FRICTION_PROMPT_TEXT[value] || value).toLowerCase();
+  }
 
-        <fieldset class="checkbox-group" id="frictionChoices">
-          <legend class="visually-hidden">Friction points</legend>
-          <label class="checkbox-chip"><input type="checkbox" value="Outdated content"><span>Outdated content</span></label>
-          <label class="checkbox-chip"><input type="checkbox" value="Internal language"><span>Internal language</span></label>
-          <label class="checkbox-chip"><input type="checkbox" value="Too many links"><span>Too many links</span></label>
-          <label class="checkbox-chip"><input type="checkbox" value="Hidden important information"><span>Hidden important information</span></label>
-          <label class="checkbox-chip"><input type="checkbox" value="Missing call to action"><span>Missing call to action</span></label>
-          <label class="checkbox-chip"><input type="checkbox" value="Inconsistent tone"><span>Inconsistent tone</span></label>
-          <label class="checkbox-chip"><input type="checkbox" value="Confusing navigation"><span>Confusing navigation</span></label>
-          <label class="checkbox-chip"><input type="checkbox" value="Not mobile-friendly"><span>Not mobile-friendly</span></label>
-          <label class="checkbox-chip"><input type="checkbox" value="Needs accessibility review"><span>Needs accessibility review</span></label>
-          <label class="checkbox-chip"><input type="checkbox" value="Other"><span>Other</span></label>
-        </fieldset>
+  function frictionList() {
+    var items = state.friction
+      .filter(function (v) { return v !== "Other"; })
+      .map(frictionPhrase);
+    if (state.friction.indexOf("Other") !== -1 && state.otherFriction) {
+      items.push(state.otherFriction.toLowerCase());
+    }
+    if (items.length === 0) {
+      return "general usability and clarity";
+    }
+    return items.join(", ");
+  }
 
-        <div class="field-group" id="otherFrictionWrap" hidden>
-          <label for="otherFrictionInput">Describe the friction</label>
-          <input type="text" id="otherFrictionInput" placeholder="e.g. Broken form submission">
-        </div>
+  function pageLabel() {
+    if (state.page === "Other" && state.otherPage) return state.otherPage;
+    return state.page || "this page";
+  }
 
-        <div class="share-toggle-row" id="shareToggleRow" hidden>
-          <label class="toggle-switch">
-            <input type="checkbox" id="shareToggleInput" checked>
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          </label>
-          <div class="share-toggle-text">
-            <p class="share-toggle-title">Share to room results</p>
-            <p class="share-toggle-sub">Anonymous &mdash; sends only your page type, score, and flagged categories. No URL, no typed text.</p>
-          </div>
-        </div>
-      </div>
+  function flagSummaryLine() {
+    var flags = flaggedLabels();
+    if (flags.length === 0) {
+      return "Internal FIND pre-score: " + computeScore() + "/4 (no dimensions flagged by the presenter)";
+    }
+    return "Internal FIND pre-score: " + computeScore() + "/4 (flagged: " + flags.join(", ") + ")";
+  }
 
-      <div class="nav-row">
-        <button type="button" class="btn btn-ghost" id="backStep2">Back</button>
-        <button type="button" class="btn btn-primary" id="toStep4">Generate prompt</button>
-      </div>
-    </section>
+  function whatToLookForLines() {
+    return [
+      "- Outdated or stale content",
+      "- Internal language or organizational jargon",
+      "- Department-centered structure instead of member-centered structure",
+      "- Hidden or buried important information",
+      "- Too many links or unclear navigation paths",
+      "- Missing or vague calls to action",
+      "- Confusing next steps",
+      "- Inconsistent tone, formatting, or structure",
+      "- Duplicated or conflicting information",
+      "- Lack of plain language",
+      "- Accessibility concerns (missing/unclear alt text, low color contrast, vague link text like \u201Cclick here,\u201D heading structure that skips levels, form fields without visible labels)",
+      "- Mobile usability concerns (small tap targets, horizontal scrolling, navigation that doesn't collapse on a phone width)",
+      "- Content that may require legal, coverage, claims, or policy expert review"
+    ];
+  }
 
-    <!-- STEP 4: Generated Prompt -->
-    <section class="step" id="step4" data-step="4" hidden aria-labelledby="step4-heading">
-      <div class="card">
-        <h2 id="step4-heading">Your audit prompt</h2>
-        <p class="card-hint">Paste this into your AI tool of choice to run the audit.</p>
+  // Returns whether the user will need to manually add page content
+  // for the audit to work. True whenever no URL was given, since most
+  // AI tools can't be assumed to browse the live web.
+  function needsManualContent() {
+    return !state.url;
+  }
 
-        <div class="manual-entry-callout" id="manualEntryCallout" role="note" hidden>
-          <span class="manual-entry-callout-icon" aria-hidden="true">&#9888;&#65039;</span>
-          <p id="manualEntryText"></p>
-        </div>
+  function contentInstructionLines() {
+    if (state.url) {
+      return [
+        "Page URL: " + state.url,
+        "If you are able to browse the web, open that URL and audit the live page.",
+        "If you are NOT able to browse live pages, stop here and ask me to paste the page's text, HTML, or a screenshot before continuing \u2014 do not guess at, assume, or invent what's on the page."
+      ];
+    }
+    return [
+      "No URL was provided for this page.",
+      "IMPORTANT: I will paste the page's text, HTML, or a screenshot directly below this prompt. Wait for that content before starting the audit \u2014 do not guess, assume, or invent what's on the page."
+    ];
+  }
 
-        <label for="promptOutput" class="visually-hidden">Generated AI audit prompt</label>
-        <div class="prompt-output-wrap" id="promptOutputWrap">
-          <textarea id="promptOutput" class="prompt-output" rows="16" readonly></textarea>
-        </div>
+  function buildPrompt() {
+    var focusList = frictionList();
 
-        <div class="copy-row">
-          <button type="button" class="btn btn-primary" id="copyPromptBtn">Copy prompt</button>
-          <button type="button" class="btn btn-ghost" id="downloadPromptBtn">Download .txt</button>
-        </div>
-        <p class="copy-confirm" id="copyConfirm" role="status" aria-live="polite"></p>
-        <p class="share-confirm" id="shareConfirm" role="status" aria-live="polite" hidden>&#10003; Shared to room results</p>
+    var lines = [
+      "Act as a website auditor for a public entity risk pool, insurance pool, or municipal association. Audit the page described below using the FIND Framework \u2014 evaluate it from the point of view of a busy member (a city clerk, public works director, HR staffer, finance officer, or risk manager) trying to get in, find what they need, and get out. Evaluate it from the member's point of view, not the organization's.",
+      "",
+      "## FIND Framework",
+      "Findable: Can members quickly locate this page or information without needing to understand the organization's internal department structure?",
+      "Intuitive: Does the navigation, wording, layout, and page structure make sense without explanation?",
+      "Necessary: Does the content serve a clear member purpose, or is it outdated, duplicated, overly internal, or no longer useful?",
+      "Directed: Does the page clearly guide members toward the next step \u2014 submitting a claim, registering for training, downloading a form, contacting the right person, accessing a resource?",
+      "",
+      "## Page being audited",
+      "Page type: " + pageLabel(),
+      flagSummaryLine(),
+      "Focus areas flagged ahead of time: " + focusList + "."
+    ];
 
-        <p class="takeaway-strip">Better input creates a better audit.</p>
-      </div>
+    lines.push("");
+    lines = lines.concat(contentInstructionLines());
 
-      <div class="nav-row nav-row-single">
-        <button type="button" class="btn btn-ghost" id="startOverBtn">Audit another page</button>
-      </div>
+    lines = lines.concat(["", "## What to look for"]).concat(whatToLookForLines());
 
-      <section class="card saved-audits-card" id="savedAuditsSection" hidden aria-labelledby="savedAuditsHeading">
-        <div class="saved-audits-header">
-          <h2 id="savedAuditsHeading">Your audits</h2>
-          <button type="button" class="link-btn" id="clearAuditsBtn">Clear all</button>
-        </div>
-        <p class="card-hint">Saved on this device only &mdash; not sent anywhere.</p>
-        <ul class="saved-audits-list" id="savedAuditsList"></ul>
-      </section>
-    </section>
+    lines = lines.concat([
+      "",
+      "## Output format",
+      "Structure your response exactly like this:",
+      "",
+      "# Website Audit: [Page Name or URL]",
+      "",
+      "## Quick Summary",
+      "2-3 sentences max, no throat-clearing. If you were only given partial information (no URL, or no pasted content), say so plainly with a \u26A0 Unverified note \u2014 do not fill gaps with assumptions.",
+      "",
+      "## FIND Scorecard",
+      "Findable: [Strong / Needs Attention / Weak / Unable to Determine] \u2014 2-3 sentence explanation",
+      "Intuitive: [Strong / Needs Attention / Weak / Unable to Determine] \u2014 2-3 sentence explanation",
+      "Necessary: [Strong / Needs Attention / Weak / Unable to Determine] \u2014 2-3 sentence explanation",
+      "Directed: [Strong / Needs Attention / Weak / Unable to Determine] \u2014 2-3 sentence explanation",
+      "",
+      "## Issues Found",
+      "- [fragment, not a paragraph]",
+      "",
+      "## Recommended Fixes",
+      "High: [fragment]",
+      "Medium: [fragment]",
+      "Low: [fragment]",
+      "",
+      "## Human Review Needed",
+      "- [anything touching legal, coverage, claims, or policy specifics \u2014 don't assess accuracy yourself, just flag it]",
+      "",
+      "## Suggested Rewrite",
+      "Before: \"[current copy]\"",
+      "After: \"[revised copy]\"",
+      "",
+      "Keep the whole audit tight enough to read in under a minute: fragments over full paragraphs, plain language throughout, and don't manufacture issues to fill out every section \u2014 if the page genuinely holds up well, say so and keep that section short."
+    ]);
 
-  </main>
+    return lines.join("\n");
+  }
 
-</div>
+  /* ---------------------------------------------------
+     Manual-entry callout (Step 4)
+  --------------------------------------------------- */
+  function updateManualEntryCallout() {
+    if (!manualEntryCallout || !manualEntryText) return;
+    if (needsManualContent()) {
+      manualEntryText.textContent =
+        "You didn't enter a URL, so this prompt is not enough on its own. Paste the page's text, HTML, or a screenshot into the chat right after this prompt \u2014 without it, the AI will guess instead of audit.";
+    } else {
+      manualEntryText.textContent =
+        "A URL is included in this prompt. If your AI tool can browse the web, it can open the link directly. If it can't, paste the page's text, HTML, or a screenshot instead \u2014 don't let it guess at page content.";
+    }
+    manualEntryCallout.hidden = false;
+  }
 
-<template id="savedAuditItemTemplate">
-  <li class="saved-audit-item">
-    <div class="saved-audit-main">
-      <p class="saved-audit-page"></p>
-      <p class="saved-audit-meta"></p>
-    </div>
-    <div class="saved-audit-actions">
-      <button type="button" class="link-btn saved-audit-copy">Copy</button>
-      <button type="button" class="icon-btn saved-audit-delete" aria-label="Delete this saved audit">&times;</button>
-    </div>
-  </li>
-</template>
+  /* ---------------------------------------------------
+     Prompt scroll fade indicators
+  --------------------------------------------------- */
+  function updatePromptFades() {
+    if (!promptOutputWrap) return;
+    var el = promptOutput;
+    var scrollable = el.scrollHeight > el.clientHeight + 2;
+    if (!scrollable) {
+      promptOutputWrap.classList.remove("show-fade-top", "show-fade-bottom");
+      return;
+    }
+    var atTop = el.scrollTop <= 2;
+    var atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
+    promptOutputWrap.classList.toggle("show-fade-top", !atTop);
+    promptOutputWrap.classList.toggle("show-fade-bottom", !atBottom);
+  }
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
-<script src="script.js"></script>
-</body>
-</html>
+  promptOutput.addEventListener("scroll", updatePromptFades);
+  window.addEventListener("resize", updatePromptFades);
+
+  /* ---------------------------------------------------
+     Copy / Download
+  --------------------------------------------------- */
+  function showConfirm(msg) {
+    copyConfirm.textContent = msg;
+    copyConfirm.classList.add("is-visible");
+    window.setTimeout(function () {
+      copyConfirm.classList.remove("is-visible");
+    }, 2200);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return Promise.reject(new Error("Clipboard API unavailable"));
+  }
+
+  function copyTextWithFallback(text, onSuccess, onFallback) {
+    copyText(text).then(onSuccess, function () {
+      var temp = document.createElement("textarea");
+      temp.value = text;
+      temp.setAttribute("readonly", "");
+      temp.style.position = "fixed";
+      temp.style.top = "-1000px";
+      temp.style.left = "-1000px";
+      document.body.appendChild(temp);
+      temp.focus();
+      temp.select();
+      temp.setSelectionRange(0, temp.value.length);
+      var ok = false;
+      try {
+        ok = document.execCommand("copy");
+      } catch (err) {
+        ok = false;
+      }
+      document.body.removeChild(temp);
+      if (ok) {
+        onSuccess();
+      } else {
+        onFallback();
+      }
+    });
+  }
+
+  copyPromptBtn.addEventListener("click", function () {
+    promptOutput.focus();
+    promptOutput.select();
+    promptOutput.setSelectionRange(0, promptOutput.value.length);
+
+    copyTextWithFallback(
+      promptOutput.value,
+      function () { showConfirm("Copied to clipboard"); },
+      function () { showConfirm("Prompt selected \u2014 copy with Ctrl/Cmd+C"); }
+    );
+  });
+
+  function slugify(text) {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "page";
+  }
+
+  function downloadText(filename, text) {
+    var blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  downloadPromptBtn.addEventListener("click", function () {
+    if (!promptOutput.value) return;
+    var filename = "find-audit-" + slugify(pageLabel()) + ".txt";
+    try {
+      downloadText(filename, promptOutput.value);
+      showConfirm("Downloaded " + filename);
+    } catch (err) {
+      showConfirm("Download unavailable \u2014 copy the prompt instead");
+    }
+  });
+
+  /* ---------------------------------------------------
+     Live room results (Firebase — optional, non-blocking)
+  --------------------------------------------------- */
+  var firebaseApp = null;
+  var firestoreDb = null;
+
+  function isFirebaseConfigured() {
+    var cfg = window.FIREBASE_CONFIG;
+    if (!cfg || typeof window.firebase === "undefined") return false;
+    var placeholderPattern = /^PASTE_/;
+    return !placeholderPattern.test(cfg.apiKey || "") &&
+      !placeholderPattern.test(cfg.projectId || "");
+  }
+
+  function getFirestoreDb() {
+    if (firestoreDb) return firestoreDb;
+    try {
+      firebaseApp = window.firebase.apps && window.firebase.apps.length
+        ? window.firebase.apps[0]
+        : window.firebase.initializeApp(window.FIREBASE_CONFIG);
+      firestoreDb = window.firebase.firestore();
+      return firestoreDb;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function pageForShare() {
+    return state.page || "Other";
+  }
+
+  function frictionForShare() {
+    return state.friction.slice();
+  }
+
+  function submitToRoomResults() {
+    if (!shareToggleInput || !shareToggleInput.checked) return;
+    if (!isFirebaseConfigured()) return;
+
+    var db = getFirestoreDb();
+    if (!db) return;
+
+    var collectionName = window.FIREBASE_COLLECTION || "submissions";
+    var entry = {
+      page: pageForShare(),
+      score: computeScore(),
+      flags: flaggedLabels(),
+      friction: frictionForShare(),
+      submittedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    db.collection(collectionName).add(entry).then(
+      function () {
+        if (shareConfirm) shareConfirm.hidden = false;
+      },
+      function () {
+        /* Fails silently — sharing is a bonus, never blocks the core flow */
+      }
+    );
+  }
+
+  function initShareToggleVisibility() {
+    if (!shareToggleRow) return;
+    shareToggleRow.hidden = !isFirebaseConfigured();
+  }
+
+  /* ---------------------------------------------------
+     Saved audits (localStorage)
+  --------------------------------------------------- */
+  function readHistory() {
+    try {
+      var raw = window.localStorage.getItem(HISTORY_KEY);
+      var parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function writeHistory(list) {
+    try {
+      window.localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+    } catch (err) {
+      /* localStorage unavailable (private browsing, quota, etc.) — fail silently */
+    }
+  }
+
+  function saveAuditToHistory(prompt) {
+    var history = readHistory();
+    var entry = {
+      id: "audit-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+      page: pageLabel(),
+      url: state.url || "",
+      score: computeScore(),
+      flags: flaggedLabels(),
+      prompt: prompt,
+      savedAt: new Date().toISOString()
+    };
+    history.unshift(entry);
+    if (history.length > HISTORY_LIMIT) {
+      history = history.slice(0, HISTORY_LIMIT);
+    }
+    writeHistory(history);
+  }
+
+  function formatSavedAt(isoString) {
+    try {
+      var d = new Date(isoString);
+      return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+        " \u00B7 " +
+        d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    } catch (err) {
+      return "";
+    }
+  }
+
+  function renderSavedAudits() {
+    var history = readHistory();
+    savedAuditsList.innerHTML = "";
+
+    if (history.length === 0) {
+      savedAuditsSection.hidden = true;
+      return;
+    }
+
+    savedAuditsSection.hidden = false;
+
+    history.forEach(function (entry) {
+      var node = savedAuditItemTemplate.content.cloneNode(true);
+      var li = node.querySelector(".saved-audit-item");
+      li.setAttribute("data-id", entry.id);
+      node.querySelector(".saved-audit-page").textContent = entry.page;
+      node.querySelector(".saved-audit-meta").textContent =
+        entry.score + "/4 \u00B7 " + formatSavedAt(entry.savedAt);
+
+      node.querySelector(".saved-audit-copy").addEventListener("click", function () {
+        copyTextWithFallback(
+          entry.prompt,
+          function () { showConfirm("Copied \u201C" + entry.page + "\u201D prompt"); },
+          function () { showConfirm("Copy unavailable \u2014 use Download on the current prompt instead"); }
+        );
+      });
+
+      node.querySelector(".saved-audit-delete").addEventListener("click", function () {
+        var remaining = readHistory().filter(function (e) { return e.id !== entry.id; });
+        writeHistory(remaining);
+        renderSavedAudits();
+      });
+
+      savedAuditsList.appendChild(node);
+    });
+  }
+
+  clearAuditsBtn.addEventListener("click", function () {
+    writeHistory([]);
+    renderSavedAudits();
+  });
+
+  /* ---------------------------------------------------
+     Audit another page (resets current form, keeps history)
+  --------------------------------------------------- */
+  startOverBtn.addEventListener("click", function () {
+    state = freshState();
+
+    pageChoices.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("is-selected"); });
+    otherPageWrap.hidden = true;
+    otherPageInput.value = "";
+    pageUrlInput.value = "";
+    toStep2Btn.disabled = true;
+
+    findQuestionEls.forEach(function (qEl) {
+      qEl.querySelectorAll(".answer-btn").forEach(function (b) { b.classList.remove("is-selected"); });
+    });
+    findTracker.querySelectorAll(".find-letter").forEach(function (el) {
+      el.classList.remove("is-answered", "is-flagged", "is-clean");
+    });
+    scoreSummary.hidden = true;
+    toStep3Btn.disabled = true;
+
+    frictionChoices.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+      cb.checked = false;
+      var label = cb.closest(".checkbox-chip");
+      if (label) label.classList.remove("is-checked");
+    });
+    otherFrictionWrap.hidden = true;
+    otherFrictionInput.value = "";
+
+    promptOutput.value = "";
+    if (promptOutputWrap) {
+      promptOutputWrap.classList.remove("show-fade-top", "show-fade-bottom");
+    }
+    if (manualEntryCallout) manualEntryCallout.hidden = true;
+    copyConfirm.classList.remove("is-visible");
+    if (shareConfirm) shareConfirm.hidden = true;
+
+    goToStep(1);
+  });
+
+  /* ---------------------------------------------------
+     Init
+  --------------------------------------------------- */
+  renderSavedAudits();
+  initShareToggleVisibility();
+  goToStep(1);
+})();
