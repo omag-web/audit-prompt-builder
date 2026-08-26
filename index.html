@@ -33,6 +33,27 @@
     font-size:0.92rem;
     line-height:1.5;
   }
+
+  /* Example prompt preview (Step 1) — same additive, theme-agnostic approach */
+  .example-prompt-note{
+    font-size:0.85rem;
+    opacity:0.75;
+    margin:0 0 10px;
+  }
+  .example-prompt-pre{
+    font-family:'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size:0.78rem;
+    line-height:1.55;
+    white-space:pre-wrap;
+    word-break:break-word;
+    max-height:340px;
+    overflow-y:auto;
+    background:rgba(0,0,0,0.035);
+    border:1px solid rgba(0,0,0,0.1);
+    border-radius:6px;
+    padding:14px 16px;
+    margin:0;
+  }
 </style>
 </head>
 <body>
@@ -107,6 +128,72 @@
             <div><dt>Necessary</dt><dd>Does the content serve a clear member purpose?</dd></div>
             <div><dt>Directed</dt><dd>Does the page clearly guide members to a next step?</dd></div>
           </dl>
+        </details>
+
+        <details class="find-info">
+          <summary>See an example prompt</summary>
+          <p class="example-prompt-note">Based on a Claims page, no URL, flagged for outdated content and confusing navigation. Yours will reflect your own answers.</p>
+          <pre class="example-prompt-pre">Act as a website auditor for a public entity risk pool, insurance pool, or municipal association. Audit the page described below using the FIND Framework — evaluate it from the point of view of a busy member (a city clerk, public works director, HR staffer, finance officer, or risk manager) trying to get in, find what they need, and get out. Evaluate it from the member's point of view, not the organization's.
+
+## FIND Framework
+Findable: Can members quickly locate this page or information without needing to understand the organization's internal department structure?
+Intuitive: Does the navigation, wording, layout, and page structure make sense without explanation?
+Necessary: Does the content serve a clear member purpose, or is it outdated, duplicated, overly internal, or no longer useful?
+Directed: Does the page clearly guide members toward the next step — submitting a claim, registering for training, downloading a form, contacting the right person, accessing a resource?
+
+## Page being audited
+Page type: Claims
+Internal FIND pre-score: 2/4 (flagged: Findable, Directed)
+Focus areas flagged ahead of time: outdated content, confusing navigation.
+
+No URL was provided for this page.
+IMPORTANT: I will paste the page's text, HTML, or a screenshot directly below this prompt. Wait for that content before starting the audit — do not guess, assume, or invent what's on the page.
+
+## What to look for
+- Outdated or stale content
+- Internal language or organizational jargon
+- Department-centered structure instead of member-centered structure
+- Hidden or buried important information
+- Too many links or unclear navigation paths
+- Missing or vague calls to action
+- Confusing next steps
+- Inconsistent tone, formatting, or structure
+- Duplicated or conflicting information
+- Lack of plain language
+- Accessibility concerns (missing/unclear alt text, low color contrast, vague link text like "click here," heading structure that skips levels, form fields without visible labels)
+- Mobile usability concerns (small tap targets, horizontal scrolling, navigation that doesn't collapse on a phone width)
+- Content that may require legal, coverage, claims, or policy expert review
+
+## Output format
+Structure your response exactly like this:
+
+# Website Audit: [Page Name or URL]
+
+## Quick Summary
+2-3 sentences max, no throat-clearing. If you were only given partial information (no URL, or no pasted content), say so plainly with a ⚠ Unverified note — do not fill gaps with assumptions.
+
+## FIND Scorecard
+Findable: [Strong / Needs Attention / Weak / Unable to Determine] — 2-3 sentence explanation
+Intuitive: [Strong / Needs Attention / Weak / Unable to Determine] — 2-3 sentence explanation
+Necessary: [Strong / Needs Attention / Weak / Unable to Determine] — 2-3 sentence explanation
+Directed: [Strong / Needs Attention / Weak / Unable to Determine] — 2-3 sentence explanation
+
+## Issues Found
+- [fragment, not a paragraph]
+
+## Recommended Fixes
+High: [fragment]
+Medium: [fragment]
+Low: [fragment]
+
+## Human Review Needed
+- [anything touching legal, coverage, claims, or policy specifics — don't assess accuracy yourself, just flag it]
+
+## Suggested Rewrite
+Before: "[current copy]"
+After: "[revised copy]"
+
+Keep the whole audit tight enough to read in under a minute: fragments over full paragraphs, plain language throughout, and don't manufacture issues to fill out every section — if the page genuinely holds up well, say so and keep that section short.</pre>
         </details>
       </div>
 
