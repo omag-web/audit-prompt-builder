@@ -95,7 +95,26 @@
     stepProgressFill.style.width = pct + "%";
     stepProgress.setAttribute("aria-valuenow", String(stepNumber));
     stepCaption.textContent = STEP_CAPTIONS[stepNumber];
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToBuilderTop();
+  }
+
+  /* When the builder lives inside another page (the AGRiP resource hub
+     marks its wrapper with data-find-builder), scroll to the builder's
+     own top instead of the top of the whole page. */
+  var builderRoot = document.querySelector("[data-find-builder]");
+  var prefersReducedMotion = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function scrollToBuilderTop() {
+    var behavior = prefersReducedMotion ? "auto" : "smooth";
+    if (!builderRoot) {
+      window.scrollTo({ top: 0, behavior: behavior });
+      return;
+    }
+    var top = builderRoot.getBoundingClientRect().top;
+    if (top < 0) {
+      window.scrollTo({ top: top + window.pageYOffset - 16, behavior: behavior });
+    }
   }
 
   /* ---------------------------------------------------
