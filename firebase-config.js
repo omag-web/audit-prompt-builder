@@ -1,7 +1,11 @@
 /* =========================================================
    FIND Audit Prompt Builder — Firebase config
    ---------------------------------------------------------
-   Project: ai-audit-prompting — already configured below.
+   Project: find-audit-results — already configured below.
+   Console: https://console.firebase.google.com/project/find-audit-results
+   (Created Oct 2026 to replace the original ai-audit-prompting
+   project, whose owner account was lost. If you can't open the
+   console link, switch Google accounts until it loads.)
 
    This file powers the optional "live room results" feature:
    attendees can anonymously share their score, and you can
@@ -73,12 +77,12 @@
    ========================================================= */
 
 window.FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBqv5sjBw80q6Aq3TjJxRpxcVBcaVpM8_E",
-  authDomain: "ai-audit-prompting.firebaseapp.com",
-  projectId: "ai-audit-prompting",
-  storageBucket: "ai-audit-prompting.firebasestorage.app",
-  messagingSenderId: "235709797258",
-  appId: "1:235709797258:web:25d172b45064abb0be6e73"
+  apiKey: "AIzaSyADnipltyGur7Rmd4Ty4rpJ1UKbqLWZV7c",
+  authDomain: "find-audit-results.firebaseapp.com",
+  projectId: "find-audit-results",
+  storageBucket: "find-audit-results.firebasestorage.app",
+  messagingSenderId: "280695718812",
+  appId: "1:280695718812:web:ea4c2d5b95c0044b8ebe59"
 };
 
 window.FIREBASE_COLLECTION = "submissions";

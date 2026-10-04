@@ -254,7 +254,10 @@
           adminClearBtn.disabled = false;
         },
         function (err) {
-          adminStatus.textContent = "Delete failed \u2014 check console.";
+          var reason = (err && err.code === "permission-denied")
+            ? "Firebase rules don\u2019t allow deletes. Republish the rules in firebase-config.js."
+            : "Delete failed: " + ((err && (err.code || err.message)) || "unknown error") + ".";
+          adminStatus.textContent = reason;
           adminClearBtn.disabled = false;
           console.warn("Clear results failed:", err);
         }
